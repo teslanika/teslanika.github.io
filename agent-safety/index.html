@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agent Safety Check</title>
+<meta name="description" content="Seven checks of your chat app's settings, so that your protection works outside the model.">
+<style>
+:root {
+  --bg: #fbfaf7; --surface: #ffffff; --ink: #1d1d1f; --muted: #5d5d66; --line: #e3e0d8;
+  --accent: #b5452f; --accent-ink: #ffffff; --code: #f1eee7; --chip: #f6e6e1;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #15161a; --surface: #1d1f24; --ink: #ecebe7; --muted: #a3a3ad; --line: #33353c;
+    --accent: #e7806a; --accent-ink: #15161a; --code: #2a2c33; --chip: #3a2a26;
+  }
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink);
+  font: 17px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+main { max-width: 760px; margin: 0 auto; padding: 32px 16px 64px; }
+h1 { font-size: 2.1rem; line-height: 1.15; margin: 0 0 8px; letter-spacing: -0.01em; }
+h2 { font-size: 1.35rem; margin: 48px 0 12px; }
+h3 { font-size: 1.2rem; margin: 0 0 6px; display: flex; align-items: center; gap: 10px; }
+h4 { font-size: 0.95rem; margin: 0 0 4px; }
+p { margin: 0 0 12px; }
+a { color: var(--accent); }
+code { background: var(--code); padding: 1px 5px; border-radius: 4px; font-size: 0.92em; }
+.lede { font-size: 1.15rem; color: var(--muted); margin-bottom: 4px; }
+.from { font-size: 0.9rem; color: var(--muted); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+textarea { width: 100%; height: 220px; resize: vertical; border: 1px solid var(--line); border-radius: 8px;
+  background: var(--bg); color: var(--ink); padding: 10px; font: 13px/1.45 ui-monospace, Menlo, Consolas, monospace; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
+button { font: inherit; font-size: 0.95rem; border-radius: 8px; padding: 8px 14px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
+button.primary, button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.status { font-size: 0.9rem; color: var(--muted); }
+.switch { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 20px; }
+.check { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px 16px; margin: 0 0 14px; }
+.num { display: inline-flex; width: 28px; height: 28px; border-radius: 50%; background: var(--chip);
+  color: var(--accent); font-size: 0.95rem; align-items: center; justify-content: center; flex: none; }
+.why { color: var(--muted); }
+dl { margin: 0; }
+dt { font-weight: 600; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); margin-top: 12px; }
+dd { margin: 4px 0 0; overflow-wrap: anywhere; }
+.where { margin: 6px 0 10px; }
+.where ul { margin: 0; padding-left: 20px; }
+.where li { margin: 3px 0; }
+.src { font-size: 0.8rem; color: var(--muted); white-space: nowrap; }
+body.app-claude .where:not([data-for="claude"]),
+body.app-chatgpt .where:not([data-for="chatgpt"]),
+body.app-other .where:not([data-for="other"]) { display: none; }
+body[class^="app-"] .where h4 { display: none; }
+table { width: 100%; border-collapse: collapse; font-size: 0.92rem; background: var(--surface); }
+th, td { border: 1px solid var(--line); padding: 8px 6px; text-align: left; vertical-align: top; }
+th { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); }
+td.box { width: 13%; }
+td.note { width: 26%; }
+.table-wrap { overflow-x: auto; }
+footer { margin-top: 48px; font-size: 0.9rem; color: var(--muted); }
+footer ul { padding-left: 20px; }
+@media print {
+  .no-print, .switch, textarea { display: none !important; }
+  body { background: #fff; color: #000; }
+  .check { break-inside: avoid; }
+}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <h1>Agent Safety Check</h1>
+  <p class="lede">Seven checks of your chat app's settings, so that your protection works outside the model.
+  A rule you only tell the model is a reminder, not a lock.</p>
+  <p class="from">From the talk at Analyst Days, 2026-11-19. For chat apps (Claude, ChatGPT, others) with connectors to mail, drive, calendar or chat.</p>
+</header>
+
+<h2>Start here: paste this prompt</h2>
+<div class="card">
+  <p>Open a new chat in the app you use, paste the prompt, and answer its questions. It walks you through the seven checks one at a time and ends with a table of what is still open. It cannot see your settings: you look, you tell it what you see.</p>
+  <textarea readonly id="prompt" aria-label="Agent Safety Check prompt">You are my Agent Safety Check guide. Walk me through seven checks of my chat app&#x27;s settings, one at a time, so that my protection works outside the model. You cannot see my settings: I look, and I tell you what I see.
+
+RULES
+- One check at a time. Ask, then wait for my answer before the next one.
+- Every check ends in exactly one state: `done`, `not done` or `this app cannot do it`. &quot;Skip&quot; counts as `not done`.
+- If my company manages the account and I cannot change a setting, the state is `this app cannot do it`: say &quot;ask your admin&quot; and move on. Do not loop.
+- Never ask for a password, API key or token. If I paste one, do not repeat it: tell me to delete that message and rotate the key.
+- Never say or imply that I am now protected. The final table always names what is still open.
+- Never invent a menu path. Use the paths at the end; if my screen differs, ask what I see and work from that.
+- Do not use any connector, tool or web search yourself during this check. I do every step and tell you what I see.
+- A rule I only give to you (custom instructions, a line in a chat) is &quot;a reminder to the model, not a lock&quot;. Label it that way every time.
+
+FLOW
+1. Ask two questions: which chat app I use, and what it is connected to (email, calendar, drive, chat, files on my computer, anything at work). If the app shows no connectors at all, note &quot;no connectors&quot;.
+2. Run the checks below in this order. For each: why, in one sentence; where it is in my app; what to set; a one-minute test; then ask for my state.
+3. At the end, print a table: check, state, what I set. For every row that is not `done`, add the remaining exposure in one line and the next step.
+4. Close with one short paragraph on the next level: a separate account or browser profile for agent work, a password manager instead of keys in chats.
+
+CHECKS
+1. Blast radius. Ask me to write, in two or three lines, the worst thing this chat could do with today&#x27;s connections. If the answer is scary, cut connections before anything else.
+2. Least Privilege. Turn off connectors the work does not need. Where offered, make a connector read-only or block its write and delete tools. Share one folder, not the whole drive. No secrets in chats or project files. No connectors at all: `done`, &quot;no connectors&quot;. Test: each connector left on has a reason I can say in one sentence.
+3. Approval Gate. Keep &quot;ask before acting&quot; for every action that sends, deletes, pays or changes who has access. Never &quot;always allow&quot; for those. Test: ask the chat to send a test email to myself; it must stop and ask first.
+4. Audit Trail. An agent can report a result it did not achieve. A log the model writes itself is not an audit trail. Find where the app shows each tool call and its raw result, and where each service keeps its own log (Sent mail, Drive activity, the Slack channel itself). Rule: when the chat says sent, saved or deleted, check it in the service before believing it. Test: do one action through a connector, find it in the service&#x27;s own log, compare with what the chat said.
+5. Kill Switch. The stop button for a running answer; how to disconnect a connector in the app; how to revoke access at the service itself. Revoke pages: Google myaccount.google.com/connections; Microsoft work account myapplications.microsoft.com; Slack: Tools and settings &gt; Manage apps; GitHub: Settings &gt; Applications. Test: start a long answer and stop it; open one revoke page and find the chat app there.
+6. Lethal Trifecta (Simon Willison&#x27;s term). Untrusted content (web search, an inbox, shared documents) + private data + a way to send data out. Keep at most two of the three in one chat. Test: name which of the three my usual chat has; if all three, turn one off or split the work into two chats.
+7. Context Amnesia. Standing rules go in project or custom instructions, not in the first message of a long chat. Start a new chat for a new task. This is a reminder to the model, not a lock. Test: open a new chat in the project and ask it to repeat my rules.
+
+WHERE THINGS ARE (per vendor help, checked 2026-11-18; menus move, so trust my screen)
+Claude: Customize &gt; Connectors &gt; [connector] &gt; Tool permissions (Always allow / Needs approval / Blocked); Disconnect is there too. Instructions: Settings &gt; Your Claude &gt; Instructions. Memory: Settings &gt; Your Claude &gt; Manage next to Your memory. Incognito: ghost icon on a new chat. Web search (older layout): + &gt; Web search. Export: Settings &gt; Privacy &gt; Export data. On Team and Enterprise an owner decides many of these.
+ChatGPT: Settings &gt; Plugins (older builds: Apps) &gt; [app] &gt; Disconnect. Approval: the app&#x27;s Preferences &gt; Ask permission &gt; Always ask. Lockdown Mode: Settings &gt; Security &gt; Advanced security. Custom instructions and Memory: Settings &gt; Personalization. Temporary chat: new chat &gt; Temporary. Export: Settings &gt; Data controls. On Business and Enterprise an admin decides many of these.
+Any other app: look for Settings &gt; Connectors, Apps, Extensions or Integrations and tell me what you see.
+
+Start now with the two questions.</textarea>
+  <div class="actions">
+    <button type="button" class="primary" id="copy">Copy the prompt</button>
+    <a href="prompt.txt" download>Download as text</a>
+    <span class="status" id="copy-status" role="status"></span>
+  </div>
+</div>
+
+<h2>Or go through it yourself</h2>
+<p>Pick your app to see only its menu paths. Menus move: if your screen differs, trust your screen.</p>
+<div class="switch" role="group" aria-label="Chat app"><button type="button" data-app="claude" aria-pressed="false">Claude</button><button type="button" data-app="chatgpt" aria-pressed="false">ChatGPT</button><button type="button" data-app="other" aria-pressed="false">Another app</button></div>
+
+<section id="blast-radius" class="check">
+  <h3><span class="num">1</span>Blast radius</h3>
+  <p class="why">You cannot protect what you have not named. The worst case decides how strict the rest must be.</p>
+  <dl>
+    <dt>What to set</dt><dd>Write, in two or three lines, the worst thing this chat could do with today&#x27;s connections (send mail as you, delete files, post in a work channel, share a document). If the answer is scary, cut connections first.</dd>
+    
+    <dt>One-minute test</dt><dd>Read your two lines aloud. If any line names an action you would not survive at work, go to Least Privilege before anything else.</dd>
+  </dl>
+</section>
+<section id="least-privilege" class="check">
+  <h3><span class="num">2</span>Least Privilege</h3>
+  <p class="why">The agent can only misuse access it has. Every connector you do not need is risk with no benefit.</p>
+  <dl>
+    <dt>What to set</dt><dd>Turn off connectors the work does not need. Where the app offers it, make a connector read-only or block its write and delete tools. Share one folder, not the whole drive. Never paste passwords, API keys or tokens into a chat or a project file. If the app shows no connectors at all, the state is <code>done</code> with &quot;no connectors&quot;.</dd>
+    <dt>Where in your app</dt><dd><div class="where" data-for="claude"><h4>Claude</h4><ul><li>Customize &gt; Connectors <span class="src">from vendor help, 2026-11-18</span></li><li>In a chat: + &gt; Connectors &gt; Manage connectors <span class="src">from vendor help, 2026-11-18</span></li><li>Customize &gt; Connectors &gt; [connector] &gt; Tool permissions: set write and delete tools to Blocked for a read-only connector <span class="src">from vendor help, 2026-11-18</span></li></ul></div><div class="where" data-for="chatgpt"><h4>ChatGPT</h4><ul><li>Settings &gt; Plugins (older builds: Settings &gt; Apps) &gt; [app] &gt; Disconnect <span class="src">from vendor help, 2026-11-18</span></li></ul></div><div class="where" data-for="other"><h4>Another app</h4><ul><li>look for Settings &gt; Connectors, Apps, Extensions or Integrations. If none exist, the state is <code>done</code> with &quot;no connectors&quot;.</li></ul></div></dd>
+    <dt>One-minute test</dt><dd>List your connectors. Each one left on has a reason you can say in one sentence.</dd>
+  </dl>
+</section>
+<section id="approval-gate" class="check">
+  <h3><span class="num">3</span>Approval Gate</h3>
+  <p class="why">An agent that acts without asking will one day act on a misunderstanding. A human click before the action is a lock the model cannot talk its way past.</p>
+  <dl>
+    <dt>What to set</dt><dd>Keep &quot;ask before acting&quot; (needs approval) for every connector action that sends, deletes, pays or changes who has access. Never choose &quot;always allow&quot; for those.</dd>
+    <dt>Where in your app</dt><dd><div class="where" data-for="claude"><h4>Claude</h4><ul><li>Customize &gt; Connectors &gt; [connector] &gt; Tool permissions: Needs approval <span class="src">from vendor help, 2026-11-18</span></li><li>New layout: the message-box mode Manual asks before each action; Auto does not <span class="src">from vendor help, 2026-11-18</span></li></ul></div><div class="where" data-for="chatgpt"><h4>ChatGPT</h4><ul><li>Plugins directory &gt; [app] &gt; Preferences &gt; Ask permission: Always ask or Any changes <span class="src">from vendor help, 2026-11-18</span></li><li>Settings &gt; Security &gt; Advanced security &gt; Lockdown Mode <span class="src">from vendor help, 2026-11-18</span></li></ul></div><div class="where" data-for="other"><h4>Another app</h4><ul><li>look inside each connector&#x27;s settings for &quot;ask&quot;, &quot;approval&quot; or &quot;permissions&quot;. If the app never asks before acting, the state is <code>this app cannot do it</code>: then keep only read-only connectors.</li></ul></div></dd>
+    <dt>One-minute test</dt><dd>Ask the chat to draft and send a test email to yourself. It must stop and ask before sending. If it sends without asking, the gate is open.</dd>
+  </dl>
+</section>
+<section id="audit-trail" class="check">
+  <h3><span class="num">4</span>Audit Trail</h3>
+  <p class="why">An agent can report a result it did not achieve: &quot;sent&quot;, &quot;saved&quot;, &quot;deleted&quot; when nothing happened, or something else happened. A log the model writes itself is not an audit trail, because the same model that got it wrong writes the log.</p>
+  <dl>
+    <dt>What to set</dt><dd>Know where the app itself shows each tool call and its raw result (drawn by the app, not written by the model), and where each connected service keeps its own log: sent mail, drive activity, chat history in Slack or Teams. Rule: when the chat says sent, saved or deleted, check it in the service before believing it.</dd>
+    <dt>Where in your app</dt><dd><div class="where" data-for="claude"><h4>Claude</h4><ul><li>Settings &gt; Privacy &gt; Export data <span class="src">from vendor help, 2026-11-18</span></li><li>Enterprise admin: Organization settings &gt; Data and Privacy &gt; Export logs <span class="src">from vendor help, 2026-11-18</span></li></ul></div><div class="where" data-for="chatgpt"><h4>ChatGPT</h4><ul><li>Settings &gt; Data controls &gt; Export data <span class="src">from vendor help, 2026-11-18</span></li></ul></div><div class="where" data-for="other"><h4>Another app</h4><ul><li>Gmail: Sent folder; Google Drive: Activity panel (i icon) of the file or folder <span class="src">from vendor help, 2026-11-18</span></li><li>Slack and Teams: the channel or chat itself; the message is there or it is not <span class="src">from vendor help, 2026-11-18</span></li><li>these are the services&#x27; own records, which the model cannot write. Compare them with what the chat said.</li></ul></div></dd>
+    <dt>One-minute test</dt><dd>Ask the chat to do one action through a connector, then find it in the service&#x27;s own log and compare with what the chat said.</dd>
+  </dl>
+</section>
+<section id="kill-switch" class="check">
+  <h3><span class="num">5</span>Kill Switch</h3>
+  <p class="why">When something goes wrong you need to stop it in seconds, and cutting access in the chat app does not always cut it at the service.</p>
+  <dl>
+    <dt>What to set</dt><dd>Know the stop button for a running answer, how to disconnect a connector in the app, and how to revoke the app&#x27;s access at the service itself (Google, Microsoft, Slack, GitHub account pages).</dd>
+    <dt>Where in your app</dt><dd><div class="where" data-for="claude"><h4>Claude</h4><ul><li>Customize &gt; Connectors &gt; [connector] &gt; Disconnect <span class="src">from vendor help, 2026-11-18</span></li><li>Google: myaccount.google.com/connections &gt; Claude &gt; Delete all connections <span class="src">from vendor help, 2026-11-18</span></li></ul></div><div class="where" data-for="chatgpt"><h4>ChatGPT</h4><ul><li>Settings &gt; Plugins &gt; [app] &gt; Disconnect <span class="src">from vendor help, 2026-11-18</span></li></ul></div><div class="where" data-for="other"><h4>Another app</h4><ul><li>Google: myaccount.google.com/connections &gt; [app] &gt; Delete all connections <span class="src">from vendor help, 2026-11-18</span></li><li>Microsoft work or school: myapplications.microsoft.com &gt; ... &gt; Manage your application &gt; Revoke permissions <span class="src">from vendor help, 2026-11-18</span></li><li>Slack: workspace menu &gt; Tools and settings &gt; Manage apps &gt; Installed apps &gt; [app] &gt; Remove <span class="src">from vendor help, 2026-11-18</span></li><li>GitHub: Settings &gt; Applications &gt; Authorized OAuth Apps &gt; Revoke <span class="src">from vendor help, 2026-11-18</span></li><li>permissions an admin granted for the whole company cannot be revoked by you on the Microsoft page; ask your admin. Microsoft personal accounts: no official page found, not listed.</li></ul></div></dd>
+    <dt>One-minute test</dt><dd>Start a long answer and stop it. Then open the revoke page for one connector and find the chat app in the list. You do not have to remove it.</dd>
+  </dl>
+</section>
+<section id="lethal-trifecta" class="check">
+  <h3><span class="num">6</span>Lethal Trifecta</h3>
+  <p class="why">Three things together let an attacker steal your data through the agent: untrusted content it reads, private data it can see, and a way to send data out. Term by <a href="https://simonwillison.net/2025/Jun/16/the-lethal-trifecta/">Simon Willison</a>.</p>
+  <dl>
+    <dt>What to set</dt><dd>Never combine all three in one chat. Untrusted content is web search, an inbox, shared documents. Private data is your files, mail, notes. A way out is any connector that can send, post or write somewhere others can read. Keep at most two of three.</dd>
+    <dt>Where in your app</dt><dd><div class="where" data-for="claude"><h4>Claude</h4><ul><li>Older layout: + &gt; Web search (a checkmark means on) <span class="src">from vendor help, 2026-11-18</span></li><li>Team and Enterprise admin: Organization settings &gt; Capabilities &gt; Web search <span class="src">from vendor help, 2026-11-18</span></li></ul></div><div class="where" data-for="chatgpt"><h4>ChatGPT</h4><ul><li>Message box &gt; View all tools &gt; Search, or type / then Search <span class="src">from vendor help, 2026-11-18</span></li></ul></div><div class="where" data-for="other"><h4>Another app</h4><ul><li>look for a web search or browsing switch in the message box or in settings.</li></ul></div></dd>
+    <dt>One-minute test</dt><dd>For your usual chat, name which of the three it has. If it has all three, turn one off (web search is often the easiest) or split the work into two chats.</dd>
+  </dl>
+</section>
+<section id="context-amnesia" class="check">
+  <h3><span class="num">7</span>Context Amnesia</h3>
+  <p class="why">In a long chat, early instructions fall out of the model&#x27;s attention or get summarized away. A rule given in the first message is gone by the fiftieth.</p>
+  <dl>
+    <dt>What to set</dt><dd>Put standing rules in project instructions or custom instructions, not in the first message of a long chat. Start a new chat for a new task. This is a reminder to the model, not a lock: it makes good behaviour more likely, it does not enforce it.</dd>
+    <dt>Where in your app</dt><dd><div class="where" data-for="claude"><h4>Claude</h4><ul><li>Settings &gt; Your Claude &gt; Instructions (older layout: Settings &gt; Account &gt; Instructions for Claude) <span class="src">from vendor help, 2026-11-18</span></li><li>Settings &gt; Your Claude &gt; Manage next to Your memory (older layout: Settings &gt; Capabilities) <span class="src">from vendor help, 2026-11-18</span></li><li>Ghost icon at the top right of a new chat: incognito, not saved to memory <span class="src">from vendor help, 2026-11-18</span></li></ul></div><div class="where" data-for="chatgpt"><h4>ChatGPT</h4><ul><li>Settings &gt; Personalization &gt; Custom instructions <span class="src">from vendor help, 2026-11-18</span></li><li>Settings &gt; Personalization &gt; Memory &gt; Manage <span class="src">from vendor help, 2026-11-18</span></li><li>New chat &gt; Temporary: not saved to memory <span class="src">from vendor help, 2026-11-18</span></li></ul></div><div class="where" data-for="other"><h4>Another app</h4><ul><li>look for custom instructions, personalization, project or gem instructions, and memory.</li></ul></div></dd>
+    <dt>One-minute test</dt><dd>Open a new chat in the project and ask it to repeat your rules. If it cannot, they are not where you think.</dd>
+  </dl>
+</section>
+
+<h2>Checklist</h2>
+<p>Print this page or fill the table in your head. "Skip" counts as not done.</p>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Check</th><th>Done</th><th>Not done</th><th>App cannot do it</th><th>What I set</th></tr></thead>
+  <tbody><tr data-check="blast-radius"><td>1. Blast radius</td><td class="box"></td><td class="box"></td><td class="box"></td><td class="note"></td></tr><tr data-check="least-privilege"><td>2. Least Privilege</td><td class="box"></td><td class="box"></td><td class="box"></td><td class="note"></td></tr><tr data-check="approval-gate"><td>3. Approval Gate</td><td class="box"></td><td class="box"></td><td class="box"></td><td class="note"></td></tr><tr data-check="audit-trail"><td>4. Audit Trail</td><td class="box"></td><td class="box"></td><td class="box"></td><td class="note"></td></tr><tr data-check="kill-switch"><td>5. Kill Switch</td><td class="box"></td><td class="box"></td><td class="box"></td><td class="note"></td></tr><tr data-check="lethal-trifecta"><td>6. Lethal Trifecta</td><td class="box"></td><td class="box"></td><td class="box"></td><td class="note"></td></tr><tr data-check="context-amnesia"><td>7. Context Amnesia</td><td class="box"></td><td class="box"></td><td class="box"></td><td class="note"></td></tr></tbody>
+</table>
+</div>
+
+<h2>Next level</h2>
+<p>Use a separate account or browser profile for agent work, so a mistake stays inside it. Keep passwords and keys in a password manager, never in a chat or a project file. On a work account, ask your admin which of these settings the company already decides for you.</p>
+
+<section id="agensi" class="card"><h4>As an agent skill</h4><p>The same check as a free skill for Claude and other agents is coming to Agensi.</p>
+</section>
+
+<footer>
+  <p>Menu paths were checked against each vendor's help pages on 2026-11-18; paths marked "checked in the app" were also opened in the app. Your plan or your admin may hide some settings.</p>
+  <ul>
+    <li>Lethal trifecta: <a href="https://simonwillison.net/2025/Jun/16/the-lethal-trifecta/">Simon Willison, 2025-06-16</a></li>
+  </ul>
+</footer>
+</main>
+<script>
+(function () {
+  var t = document.getElementById('prompt'), s = document.getElementById('copy-status');
+  document.getElementById('copy').addEventListener('click', function () {
+    function done() { s.textContent = 'Copied. Paste it into a new chat.'; }
+    function legacy() { t.focus(); t.select(); try { document.execCommand('copy'); done(); } catch (e) { s.textContent = 'Select the text and copy it.'; } }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(t.value).then(done, legacy);
+    } else { legacy(); }
+  });
+  var buttons = document.querySelectorAll('.switch button');
+  function pick(app) {
+    document.body.className = app ? 'app-' + app : '';
+    for (var i = 0; i < buttons.length; i++) {
+      buttons[i].setAttribute('aria-pressed', buttons[i].getAttribute('data-app') === app ? 'true' : 'false');
+    }
+    try { localStorage.setItem('asc-app', app); } catch (e) {}
+  }
+  for (var i = 0; i < buttons.length; i++) {
+    buttons[i].addEventListener('click', function () {
+      var app = this.getAttribute('data-app');
+      pick(this.getAttribute('aria-pressed') === 'true' ? '' : app);
+    });
+  }
+  try { var saved = localStorage.getItem('asc-app'); if (saved) pick(saved); } catch (e) {}
+})();
+</script>
+</body>
+</html>
